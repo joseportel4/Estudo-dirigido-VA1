@@ -246,6 +246,18 @@ def main():
                             rota_ia = []
                             estado_atual = "ESTADO_TREINANDO_QL"
 
+                    elif evento.key == pygame.K_n and agente_selecionado in ["A*", "Algoritmo Genético"]:
+                        if env.dificuldade in ["FACIL", "MEDIO"]:
+                            nova_dif = "MEDIO" if env.dificuldade == "FACIL" else "DIFICIL"
+                            env = CampoBatalhaEnv(dificuldade=nova_dif)
+                            estado_ia = env.reset()
+                            pontuacao = 0
+                            status_jogo = "Correndo"
+                            acao_str = f"Nível {nova_dif} Gerado! Pressione 'A' para testar."
+                            ia_em_execucao = False
+                            rota_ia = []
+                            visitados_ag = set()
+
                     elif evento.key == pygame.K_t and agente_selecionado == "Algoritmo Genético":
                         caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_treino_ag.log")
                         if os.path.exists(caminho_log): os.remove(caminho_log)
@@ -347,7 +359,7 @@ def main():
             elif agente_selecionado == "Q-Learning":
                 modo_painel = "IA_QLEARNING"
             elif agente_selecionado == "Algoritmo Genético":
-                if cerebro_carregado and (ia_em_execucao or status_jogo != "Correndo"):
+                if cerebro_carregado:
                     modo_painel = "IA_REPLAY"
                 else:
                     modo_painel = "IA_GENETICO"

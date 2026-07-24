@@ -153,16 +153,19 @@ class Dashboard:
         if modo == "MANUAL":
             texto_rodape = "[Setas] Mover  |  [R] Reiniciar  |  [N] Avançar Nível  |  [ESC] Voltar"
         elif modo == "IA_ASTAR":
-            texto_rodape = "[A] Iniciar A* |  [R] Repetir Mapa  |  [M] Novo Mapa  |  [ESC] Voltar"
+            texto_rodape = "[A] Iniciar A* |  [R] Repetir Mapa |  [N] Subir Nível  |  [M] Novo Mapa  |  [ESC] Voltar"
         elif modo == "IA_GENETICO":
-            texto_rodape = "[T] Treinar (Zero) |  [C] Continuar (Transfer Learning) |  [ESC] Voltar"
+            texto_rodape = "[L] Continuar Treino |  [C] Injetar Cérebro Atual |  [ESC] Voltar"
         elif modo == "IA_QLEARNING":
             if env.dificuldade in ["FACIL", "MEDIO"]:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"
             else:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [ESC] Voltar"
         elif modo == "IA_REPLAY":
-            texto_rodape = "[A] Iniciar Replay  |  [R] Repetir Replay  |  [ESC] Voltar"
+            if env.dificuldade in ["FACIL", "MEDIO"]:
+                texto_rodape = "[A] Iniciar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"
+            else:
+                texto_rodape = "[A] Iniciar  |  [R] Repetir  |  [M] Novo Mapa  |  [ESC] Voltar"
         else:
             texto_rodape = "[ESC] Voltar"
 
