@@ -36,6 +36,18 @@ def main():
     cerebro_carregado = None
     visitados_ag = set()  # Memória runtime do AG
 
+    # --- VARIÁVEIS DA ARENA DE COMPARAÇÃO ---
+    lista_comparacao = []
+    comparacao_em_andamento = False
+
+    CORES_AGENTES = {
+        "A* Focado": (50, 150, 255),  # Azul
+        "A* Equilibrado": (180, 50, 255),  # Roxo
+        "A* Guloso": (255, 100, 50),  # Laranja
+        "Algoritmo Genético": (50, 255, 100),  # Verde
+        "Q-Learning": (255, 50, 100)  # Rosa/Vermelho
+    }
+
     estado_ia = None
     indice_rota = 0
     delay_passo_ia = 150
@@ -57,7 +69,7 @@ def main():
             if novo_estado == "SAIR":
                 pygame.quit()
                 sys.exit()
-            elif novo_estado in ["SELECIONAR_DIF_MANUAL", "ESTADO_SELECIONAR_AGENTE"]:
+            elif novo_estado in ["SELECIONAR_DIF_MANUAL", "ESTADO_SELECIONAR_AGENTE", "ESTADO_SELECIONAR_COMPARACAO"]:
                 estado_atual = novo_estado
             menu.desenhar(tela)
 
@@ -73,43 +85,172 @@ def main():
                 estado_atual = "SELECIONAR_DIF_IA"
             menu.desenhar_agentes(tela)
 
+        # --- NOVA ROTA: SELEÇÃO DA ARENA ---
+        elif estado_atual == "ESTADO_SELECIONAR_COMPARACAO":
+            novo_estado = menu.processar_eventos_comparacao(eventos)
+            if novo_estado != "ESTADO_SELECIONAR_COMPARACAO":
+                estado_atual = novo_estado
+            menu.desenhar_selecao_comparacao(tela)
+
         elif estado_atual == "ESTADO_EM_DESENVOLVIMENTO":
             if menu.processar_eventos_wip(eventos) == "VOLTAR": estado_atual = "ESTADO_SELECIONAR_AGENTE"
             for evento in eventos:
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE: estado_atual = "ESTADO_SELECIONAR_AGENTE"
             menu.desenhar_em_desenvolvimento(tela, agente_selecionado)
 
-        elif estado_atual in ["SELECIONAR_DIF_MANUAL", "SELECIONAR_DIF_IA"]:
+        elif estado_atual in ["SELECIONAR_DIF_MANUAL", "SELECIONAR_DIF_IA", "SELECIONAR_DIF_COMPARACAO"]:
             escolha = menu.processar_eventos_dificuldade(eventos)
 
             if escolha == "VOLTAR":
-                estado_atual = "ESTADO_MENU" if estado_atual == "SELECIONAR_DIF_MANUAL" else "ESTADO_SELECIONAR_AGENTE"
+                if estado_atual == "SELECIONAR_DIF_MANUAL":
+                    estado_atual = "ESTADO_MENU"
+                elif estado_atual == "SELECIONAR_DIF_IA":
+                    estado_atual = "ESTADO_SELECIONAR_AGENTE"
+                else:
+                    estado_atual = "ESTADO_SELECIONAR_COMPARACAO"
+
             elif escolha in ["FACIL", "MEDIO", "DIFICIL"]:
                 env = CampoBatalhaEnv(dificuldade=escolha)
-                estado_ia = env.reset()
-                pontuacao = 0
-                status_jogo = "Correndo"
-                ia_em_execucao = False
-                rota_ia = []
-                cerebro_carregado = None
-                visitados_ag = set()
 
-                if estado_atual == "SELECIONAR_DIF_MANUAL":
-                    acao_str = "Nova Simulação"
-                    estado_atual = "ESTADO_JOGAR"
+                # Setup Arena de Comparação
+                if estado_atual == "SELECIONAR_DIF_COMPARACAO":
+                    lista_comparacao = []
+                    semente_global = env.seed_atual
+
+                    agentes_marcados = [k for k, v in menu.agentes_comparacao.items() if v]
+
+                    for nome_ag in agentes_marcados:
+                        # Cria um universo paralelo exato usando a mesma Semente Global
+                        env_clone = CampoBatalhaEnv(dificuldade=escolha, seed=semente_global)
+                        visao_inicial = env_clone.reset()
+
+                        ag_dict = {
+                            "nome": nome_ag,
+                            "env": env_clone,
+                            "estado": visao_inicial,
+                            "cor": CORES_AGENTES.get(nome_ag, (255, 255, 255)),
+                            "pontuacao": 0,
+                            "done": False,
+                            "visitados": set(),
+                            "rota": [],
+                            "indice_rota": 0
+                        }
+
+                        # Injeção Cerebral Oculta
+                        if "A*" in nome_ag:
+                            modo_astar = nome_ag.split(" ")[1].upper()  # FOCADO, EQUILIBRADO, GULOSO
+                            inst_a = AgenteAStar(env_clone)
+                            ag_dict["instancia"] = inst_a
+                            ag_dict["modo"] = modo_astar
+                        elif nome_ag == "Algoritmo Genético":
+                            inst_g = AlgoritmoGenetico(env_clone)
+                            ag_dict["cerebro"] = inst_g.carregar_cerebro()
+                        elif nome_ag == "Q-Learning":
+                            inst_q = AgenteQLearning(env_clone)
+                            inst_q._carregar_qtable()
+                            ag_dict["instancia"] = inst_q
+
+                        lista_comparacao.append(ag_dict)
+
+                    comparacao_em_andamento = False
+                    estado_atual = "ESTADO_JOGAR_COMPARACAO"
+
                 else:
-                    if agente_selecionado == "Algoritmo Genético":
-                        acao_str = "[AG] T: Treinar | L: Continuar Treino | C: Testar Cérebro"
-                        estado_atual = "ESTADO_AGENTES"
-                    elif agente_selecionado == "Q-Learning":
-                        ag_instancia = AgenteQLearning(env)
-                        estado_atual = "ESTADO_TREINANDO_QL"
-                    else:
-                        ag_instancia = AgenteAStar(env)
-                        acao_str = f"[{agente_selecionado}] Prontidão"
-                        estado_atual = "ESTADO_AGENTES"
+                    estado_ia = env.reset()
+                    pontuacao = 0
+                    status_jogo = "Correndo"
+                    ia_em_execucao = False
+                    rota_ia = []
+                    cerebro_carregado = None
+                    visitados_ag = set()
 
-            menu.desenhar_dificuldade(tela, "MANUAL" if estado_atual == "SELECIONAR_DIF_MANUAL" else "IA")
+                    if estado_atual == "SELECIONAR_DIF_MANUAL":
+                        acao_str = "Nova Simulação"
+                        estado_atual = "ESTADO_JOGAR"
+                    else:
+                        if agente_selecionado == "Algoritmo Genético":
+                            acao_str = "[AG] T: Treinar | L: Continuar Treino | C: Testar Cérebro"
+                            estado_atual = "ESTADO_AGENTES"
+                        elif agente_selecionado == "Q-Learning":
+                            ag_instancia = AgenteQLearning(env)
+                            estado_atual = "ESTADO_TREINANDO_QL"
+                        else:
+                            ag_instancia = AgenteAStar(env)
+                            acao_str = f"[{agente_selecionado}] Prontidão"
+                            estado_atual = "ESTADO_AGENTES"
+
+            modo_titulo = "MANUAL" if estado_atual == "SELECIONAR_DIF_MANUAL" else (
+                "COMPARACAO" if estado_atual == "SELECIONAR_DIF_COMPARACAO" else "IA")
+            menu.desenhar_dificuldade(tela, modo_titulo)
+
+        # --- EXECUÇÃO DA ARENA DE COMPARAÇÃO ---
+        elif estado_atual == "ESTADO_JOGAR_COMPARACAO":
+            for evento in eventos:
+                if evento.type == pygame.KEYDOWN:
+                    if evento.key == pygame.K_ESCAPE:
+                        estado_atual = "ESTADO_SELECIONAR_COMPARACAO"
+                        comparacao_em_andamento = False
+                    elif evento.key == pygame.K_m:
+                        estado_atual = "SELECIONAR_DIF_COMPARACAO"
+                    elif evento.key == pygame.K_a and not comparacao_em_andamento:
+                        comparacao_em_andamento = True
+                        ultimo_tempo_mov = tempo_atual
+
+                        # Calcula rotas prévias para A* e Q-Learning
+                        for ag in lista_comparacao:
+                            ag['env'].reset()
+                            ag['pontuacao'] = 0
+                            ag['done'] = False
+                            ag['visitados'] = set()
+                            if "A*" in ag['nome']:
+                                ag['rota'] = ag['instancia'].planejar_rota(modo=ag['modo'])
+                                ag['indice_rota'] = 0
+                                if not ag['rota']: ag['done'] = True
+                            elif ag['nome'] == "Q-Learning":
+                                ag['rota'] = ag['instancia'].planejar_rota()
+                                ag['estado'] = ag['env'].reset()
+                                ag['indice_rota'] = 0
+                                if not ag['rota']: ag['done'] = True
+
+            if comparacao_em_andamento:
+                if tempo_atual - ultimo_tempo_mov > delay_passo_ia:
+                    todos_finalizados = True
+                    for ag in lista_comparacao:
+                        if not ag['done']:
+                            todos_finalizados = False
+                            acao = -1
+
+                            # Decisão Tática
+                            if "A*" in ag['nome'] or ag['nome'] == "Q-Learning":
+                                if ag['indice_rota'] < len(ag['rota']):
+                                    acao = ag['rota'][ag['indice_rota']]
+                                    ag['indice_rota'] += 1
+                                else:
+                                    ag['done'] = True
+                                    continue
+                            elif ag['nome'] == "Algoritmo Genético":
+                                if ag['cerebro']:
+                                    dummy_ag = AlgoritmoGenetico(ag['env'])
+                                    acao = dummy_ag._decidir_acao(ag['cerebro'], ag['estado'], ag['env'],
+                                                                  modo_treino=False, visitados=ag['visitados'])
+                                    ag['visitados'].add((ag['env'].posicao_x, ag['env'].posicao_y, acao))
+                                else:
+                                    ag['done'] = True
+                                    continue
+
+                            # Execução
+                            novo_estado, recomp, done, _ = ag['env'].step(acao)
+                            ag['estado'] = novo_estado
+                            ag['pontuacao'] += recomp
+                            if done:
+                                ag['done'] = True
+
+                    if todos_finalizados:
+                        comparacao_em_andamento = False
+                    ultimo_tempo_mov = tempo_atual
+
+            dashboard.renderizar_arena(tela, lista_comparacao,
+                                       "Em Andamento" if comparacao_em_andamento else "Finalizado")
 
         elif estado_atual == "ESTADO_TREINANDO_IA":
             for evento in eventos:
@@ -259,30 +400,28 @@ def main():
                         rota_ia = []
                         estado_atual = "ESTADO_TREINANDO_QL"
 
-                    elif evento.key == pygame.K_n and agente_selecionado == "Q-Learning":
-                        if env.dificuldade in ["FACIL", "MEDIO"]:
-                            nova_dif = "MEDIO" if env.dificuldade == "FACIL" else "DIFICIL"
-                            env = CampoBatalhaEnv(dificuldade=nova_dif)
-                            estado_ia = env.reset()
-                            ag_instancia = AgenteQLearning(env)
-                            pontuacao = 0
-                            status_jogo = "Correndo"
-                            acao_str = f"[Q-Learning] Retreinando no Nível {nova_dif}..."
-                            ia_em_execucao = False
-                            rota_ia = []
-                            estado_atual = "ESTADO_TREINANDO_QL"
-
-                    elif evento.key == pygame.K_n and agente_selecionado in ["A*", "Algoritmo Genético"]:
+                    # --- MERGE: Avanço Dinâmico de Nível (UX do Colega + Correção A*) ---
+                    elif evento.key == pygame.K_n and agente_selecionado in ["Q-Learning", "A*", "Algoritmo Genético"]:
                         if env.dificuldade in ["FACIL", "MEDIO"]:
                             nova_dif = "MEDIO" if env.dificuldade == "FACIL" else "DIFICIL"
                             env = CampoBatalhaEnv(dificuldade=nova_dif)
                             estado_ia = env.reset()
                             pontuacao = 0
                             status_jogo = "Correndo"
-                            acao_str = f"Nível {nova_dif} Gerado! Pressione 'A' para testar."
                             ia_em_execucao = False
                             rota_ia = []
                             visitados_ag = set()
+
+                            if agente_selecionado == "Q-Learning":
+                                ag_instancia = AgenteQLearning(env)
+                                acao_str = f"[Q-Learning] Retreinando no Nível {nova_dif}..."
+                                estado_atual = "ESTADO_TREINANDO_QL"
+                            else:
+                                acao_str = f"Nível {nova_dif} Gerado! Pressione 'A' para testar."
+                                if agente_selecionado == "A*" and ag_instancia:
+                                    modo_atual = ag_instancia.modo_selecionado
+                                    ag_instancia = AgenteAStar(env)
+                                    ag_instancia.modo_selecionado = modo_atual
 
                     elif evento.key == pygame.K_t and agente_selecionado == "Algoritmo Genético":
                         caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_treino_ag.log")
@@ -386,7 +525,7 @@ def main():
             elif agente_selecionado == "Q-Learning":
                 modo_painel = "IA_QLEARNING"
             elif agente_selecionado == "Algoritmo Genético":
-                if cerebro_carregado:
+                if cerebro_carregado and (ia_em_execucao or status_jogo != "Correndo"):
                     modo_painel = "IA_REPLAY"
                 else:
                     modo_painel = "IA_GENETICO"
