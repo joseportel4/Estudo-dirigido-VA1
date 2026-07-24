@@ -372,7 +372,7 @@ class AgenteQLearning:
             # Ação 3 (recuar,   y-1): imediato = visao[1][2]
             if visao_local[1][2] in [self.env.MINA, -1]: valores_q[3] = -99999
 
-            # ── Anti-loop: bloqueia destinos visitados 3+ vezes ──────────────
+            # ── Penalidade Anti-loop Progressiva ──────────────
             destinos = {
                 0: (self.env.posicao_x,     self.env.posicao_y + 1),
                 1: (self.env.posicao_x - 1, self.env.posicao_y),
@@ -380,8 +380,10 @@ class AgenteQLearning:
                 3: (self.env.posicao_x,     self.env.posicao_y - 1),
             }
             for a, prox_pos in destinos.items():
-                if contagem_pos.get(prox_pos, 0) >= 3:
-                    valores_q[a] = -99999
+                visitas = contagem_pos.get(prox_pos, 0)
+                if visitas > 0:
+                    if valores_q[a] > -99999:
+                        valores_q[a] -= (visitas * 2.5)
 
             max_q = max(valores_q)
             if max_q <= -99999:
