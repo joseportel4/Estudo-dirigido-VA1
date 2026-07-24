@@ -128,23 +128,65 @@ class AlgoritmoGenetico:
         matriz_pesos = np.array(pesos).reshape(self.num_inputs, self.num_acoes)
         outputs = np.dot(inputs, matriz_pesos)
 
-        # Na hora da exibição visual (modo_treino=False), aciona as travas
-        if not modo_treino:
-            # Trava Anti-Suicídio
-            if visao_local[3][2] in [env_ref.MINA, -1]: outputs[0] = -99999.0
-            if visao_local[2][1] in [env_ref.MINA, -1]: outputs[1] = -99999.0
-            if visao_local[2][3] in [env_ref.MINA, -1]: outputs[2] = -99999.0
-            if visao_local[1][2] in [env_ref.MINA, -1]: outputs[3] = -99999.0
+        # === 1. INSTINTO SUPERIOR SUPREMO AVANÇADO IMPLACÁVEL INDOMÁVEL SANGUINÁRIO===
+        # Procura caminhos seguros para doces ou vitória em todo o campo de visão
+        obstaculos = [env_ref.MINA, env_ref.LAMA, -1]
+        fila = [(2, 2, [])]  # Inicia no centro do radar (y=2, x=2)
+        visitados_bfs = {(2, 2)}
+        atracoes = [0.0, 0.0, 0.0, 0.0]
 
-            # Trava Anti-Looping (Memória Injetada)
+        acoes_delta = {
+            0: (1, 0),  # Avançar
+            1: (0, -1),  # Esquerda
+            2: (0, 1),  # Direita
+            3: (-1, 0)  # Recuar
+        }
+
+        while fila:
+            cy, cx, caminho = fila.pop(0)
+
+            terreno = visao_local[cy][cx]
+
+            # Se achou recompensa, dá um boost na "PRIMEIRA AÇÃO" que iniciou esse caminho
+            if caminho:
+                primeira_acao = caminho[0]
+                if terreno == env_ref.OBJETIVO:
+                    atracoes[primeira_acao] += 50000.0 / len(caminho)  # Quanto mais perto, maior a atração
+                elif terreno == env_ref.CHOCOLATE:
+                    atracoes[primeira_acao] += 500.0 / len(caminho)
+
+            # O agente vasculha até a borda da matriz 5x5
+            if len(caminho) < 4:
+                for acao_id, (dy, dx) in acoes_delta.items():
+                    ny, nx = cy + dy, cx + dx
+                    if 0 <= ny < 5 and 0 <= nx < 5:
+                        if (ny, nx) not in visitados_bfs:
+                            if visao_local[ny][nx] not in obstaculos:
+                                visitados_bfs.add((ny, nx))
+                                fila.append((ny, nx, caminho + [acao_id]))
+
+        # Aplica a atração do faro na decisão da rede neural
+        outputs[0] += atracoes[0]
+        outputs[1] += atracoes[1]
+        outputs[2] += atracoes[2]
+        outputs[3] += atracoes[3]
+
+        # === 2. INSTINTO DE SOBREVIVÊNCIA ===
+        if not modo_treino:
+            # Trava Anti-Suicídio para a Interface Visual
+            if visao_local[3][2] in [env_ref.MINA, -1]: outputs[0] -= 99999.0
+            if visao_local[2][1] in [env_ref.MINA, -1]: outputs[1] -= 99999.0
+            if visao_local[2][3] in [env_ref.MINA, -1]: outputs[2] -= 99999.0
+            if visao_local[1][2] in [env_ref.MINA, -1]: outputs[3] -= 99999.0
+
+            # Memória Anti-Looping (Usa outras rotas seguras se travado)
             if visitados is not None:
                 acoes_ordenadas = np.argsort(outputs)[::-1]
                 for acao_cand in acoes_ordenadas:
                     if outputs[acao_cand] <= -90000: continue
-                    # Se não tentou essa ação neste bloco ainda, faça!
                     if (env_ref.posicao_x, env_ref.posicao_y, acao_cand) not in visitados:
                         return int(acao_cand)
-                # Se cercado, escolhe a melhor ação não-suicida
+
                 for acao_cand in acoes_ordenadas:
                     if outputs[acao_cand] > -90000: return int(acao_cand)
 
@@ -185,7 +227,6 @@ class AlgoritmoGenetico:
 
                 pontuacao_total += recompensa
 
-                # Guilhotina contra agentes que desistem e ficam andando em círculos
                 if passos_sem_progresso >= 35:
                     done = True
                     penalidade_loop += 4000
@@ -194,7 +235,6 @@ class AlgoritmoGenetico:
                     if recompensa == 100: vitorias += 1
                     break
 
-            # NOVO FITNESS: Score exato baseado na Distância de Manhattan
             dist_manhattan = abs(env_teste.objetivo_x - env_teste.posicao_x) + abs(
                 (env_teste.comprimento - 1) - env_teste.posicao_y)
             dist_maxima = env_teste.largura + env_teste.comprimento
@@ -232,7 +272,6 @@ class AlgoritmoGenetico:
                 melhor_individuo = ind
 
         terminou = False
-        # O Log agora mostra a real eficiência do líder!
         taxa_sucesso_campeao = melhor_individuo.taxa_vitoria
 
         if melhor_individuo.taxa_vitoria == 1.0:
