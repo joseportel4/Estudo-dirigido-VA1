@@ -42,7 +42,7 @@ class MenuPrincipal:
             "VOLTAR": pygame.Rect(centro_x, 570, largura_botao, altura_botao)
         }
 
-        # --- TELA DE COMPARAÇÃO (Múltipla Escolha) ---
+        # --- TELA DE COMPARAÇÃO (Revertida para 5 checkboxes originais) ---
         self.agentes_comparacao = {
             "A* Focado": False,
             "A* Equilibrado": False,
@@ -54,7 +54,7 @@ class MenuPrincipal:
         y_start = 220
         for nome in self.agentes_comparacao.keys():
             self.botoes_checkbox[nome] = pygame.Rect(centro_x, y_start, largura_botao, 45)
-            y_start += 60
+            y_start += 60  # Espaçamento original restaurado
 
         self.btn_iniciar_comp = pygame.Rect(centro_x, y_start + 20, largura_botao, altura_botao)
         self.btn_voltar_comp = pygame.Rect(centro_x, y_start + 90, largura_botao, altura_botao)

@@ -40,7 +40,7 @@ class AlgoritmoGenetico:
 
     def carregar_cerebro(self):
         pasta_atual = os.path.dirname(os.path.abspath(__file__))
-        caminho_arquivo = os.path.join(pasta_atual, "cerebro_campeao.json")
+        caminho_arquivo = os.path.join(pasta_atual, f"cerebro_campeao_{self.env_base.dificuldade}.json")
 
         try:
             if not os.path.exists(caminho_arquivo): return False
@@ -61,7 +61,7 @@ class AlgoritmoGenetico:
         if ind is None: return
 
         pasta_atual = os.path.dirname(os.path.abspath(__file__))
-        caminho_arquivo = os.path.join(pasta_atual, "cerebro_campeao.json")
+        caminho_arquivo = os.path.join(pasta_atual, f"cerebro_campeao_{self.env_base.dificuldade}.json")
         dados = {
             "geracao_vencedora": gen,
             "dificuldade": self.env_base.dificuldade,
@@ -76,7 +76,7 @@ class AlgoritmoGenetico:
 
     def continuar_treinamento_do_cerebro(self):
         pasta_atual = os.path.dirname(os.path.abspath(__file__))
-        caminho_arquivo = os.path.join(pasta_atual, "cerebro_campeao.json")
+        caminho_arquivo = os.path.join(pasta_atual, f"cerebro_campeao_{self.env_base.dificuldade}.json")
 
         try:
             if not os.path.exists(caminho_arquivo): return False
@@ -129,9 +129,8 @@ class AlgoritmoGenetico:
         outputs = np.dot(inputs, matriz_pesos)
 
         # === 1. INSTINTO SUPERIOR SUPREMO AVANÇADO IMPLACÁVEL INDOMÁVEL SANGUINÁRIO===
-        # Procura caminhos seguros para doces ou vitória em todo o campo de visão
         obstaculos = [env_ref.MINA, env_ref.LAMA, -1]
-        fila = [(2, 2, [])]  # Inicia no centro do radar (y=2, x=2)
+        fila = [(2, 2, [])]
         visitados_bfs = {(2, 2)}
         atracoes = [0.0, 0.0, 0.0, 0.0]
 
@@ -144,18 +143,15 @@ class AlgoritmoGenetico:
 
         while fila:
             cy, cx, caminho = fila.pop(0)
-
             terreno = visao_local[cy][cx]
 
-            # Se achou recompensa, dá um boost na "PRIMEIRA AÇÃO" que iniciou esse caminho
             if caminho:
                 primeira_acao = caminho[0]
                 if terreno == env_ref.OBJETIVO:
-                    atracoes[primeira_acao] += 50000.0 / len(caminho)  # Quanto mais perto, maior a atração
+                    atracoes[primeira_acao] += 50000.0 / len(caminho)
                 elif terreno == env_ref.CHOCOLATE:
                     atracoes[primeira_acao] += 500.0 / len(caminho)
 
-            # O agente vasculha até a borda da matriz 5x5
             if len(caminho) < 4:
                 for acao_id, (dy, dx) in acoes_delta.items():
                     ny, nx = cy + dy, cx + dx
@@ -165,7 +161,6 @@ class AlgoritmoGenetico:
                                 visitados_bfs.add((ny, nx))
                                 fila.append((ny, nx, caminho + [acao_id]))
 
-        # Aplica a atração do faro na decisão da rede neural
         outputs[0] += atracoes[0]
         outputs[1] += atracoes[1]
         outputs[2] += atracoes[2]
@@ -173,20 +168,19 @@ class AlgoritmoGenetico:
 
         # === 2. INSTINTO DE SOBREVIVÊNCIA ===
         if not modo_treino:
-            # Trava Anti-Suicídio para a Interface Visual
+            # Trava Anti-Suicídio
             if visao_local[3][2] in [env_ref.MINA, -1]: outputs[0] -= 99999.0
             if visao_local[2][1] in [env_ref.MINA, -1]: outputs[1] -= 99999.0
             if visao_local[2][3] in [env_ref.MINA, -1]: outputs[2] -= 99999.0
             if visao_local[1][2] in [env_ref.MINA, -1]: outputs[3] -= 99999.0
 
-            # Memória Anti-Looping (Usa outras rotas seguras se travado)
+            # Memória Anti-Looping
             if visitados is not None:
                 acoes_ordenadas = np.argsort(outputs)[::-1]
                 for acao_cand in acoes_ordenadas:
                     if outputs[acao_cand] <= -90000: continue
                     if (env_ref.posicao_x, env_ref.posicao_y, acao_cand) not in visitados:
                         return int(acao_cand)
-
                 for acao_cand in acoes_ordenadas:
                     if outputs[acao_cand] > -90000: return int(acao_cand)
 
@@ -251,7 +245,9 @@ class AlgoritmoGenetico:
         return fitness_total / self.num_lotes, vitorias
 
     def log_depuracao(self, geracao, fit, sucesso, estagnacao, acao="Treino"):
-        caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_treino_ag.log")
+        nome_arquivo = f"debug_treino_ag_{self.env_base.dificuldade}.log"
+        caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), nome_arquivo)
+
         log_str = f"Ger: {geracao:04d} | Modo: {self.env_base.dificuldade} | Fit Médio: {fit:7.1f} | Tx Vitória Campeão: {sucesso:5.1%} | Estagnação: {estagnacao:02d} | Status: {acao}\n"
         with open(caminho_log, "a", encoding="utf-8") as f:
             f.write(log_str)
@@ -316,19 +312,19 @@ class AlgoritmoGenetico:
             if self.geracoes_sem_melhora >= 40:
                 self.log_depuracao(self.geracao_atual, melhor_fitness_geracao, taxa_sucesso_campeao,
                                    self.geracoes_sem_melhora, "CATACLISMO (Reboot Parcial)")
-                self.melhor_fitness_global = -999999
 
                 nova_populacao = []
                 campeao_sobrevivente = Individuo(self.tamanho_cromossomo)
-                campeao_sobrevivente.cromossomo = list(melhor_individuo.cromossomo)
-
-                for i in range(self.tamanho_cromossomo):
-                    if random.random() < 0.50:
-                        campeao_sobrevivente.cromossomo[i] = random.uniform(-1.0, 1.0)
-
+                campeao_sobrevivente.cromossomo = list(self.melhor_individuo_global.cromossomo)
+                campeao_sobrevivente.fitness = self.melhor_individuo_global.fitness
                 nova_populacao.append(campeao_sobrevivente)
+
                 while len(nova_populacao) < self.tamanho_populacao:
-                    nova_populacao.append(Individuo(self.tamanho_cromossomo))
+                    ind_novo = Individuo(self.tamanho_cromossomo)
+                    if random.random() < 0.5:
+                        ind_novo.cromossomo = list(self.melhor_individuo_global.cromossomo)
+                        self._mutacao_pesos(ind_novo, estagnado=True)
+                    nova_populacao.append(ind_novo)
 
                 self.populacao = nova_populacao
                 self.geracoes_sem_melhora = 0

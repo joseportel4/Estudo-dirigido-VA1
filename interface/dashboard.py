@@ -26,7 +26,6 @@ class Dashboard:
         self.fonte_texto = pygame.font.SysFont("Segoe UI", 16, bold=True)
         self.fonte_grande = pygame.font.SysFont("Consolas", 30, bold=True)
         self.fonte_gigante = pygame.font.SysFont("Segoe UI", 48, bold=True)
-
         self.fonte_mini_titulo = pygame.font.SysFont("Segoe UI", 20, bold=True)
 
     def _desenhar_icone_mina(self, tela, x, y, tamanho):
@@ -152,7 +151,7 @@ class Dashboard:
             fit_txt = "---"
             dif_txt = "---"
             try:
-                caminho_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cerebro_campeao.json")
+                caminho_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", f"cerebro_campeao_{env.dificuldade}.json")
                 if os.path.exists(caminho_json):
                     with open(caminho_json, "r", encoding="utf-8") as f:
                         dados_cb = json.load(f)

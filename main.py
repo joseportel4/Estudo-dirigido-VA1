@@ -404,7 +404,6 @@ def main():
                         rota_ia = []
                         qlearning_pronto = False
 
-                    # --- MERGE: Avanço Dinâmico de Nível (UX do Colega + Correção A*) ---
                     elif evento.key == pygame.K_n and agente_selecionado in ["Q-Learning", "A*", "Algoritmo Genético"]:
                         if env.dificuldade in ["FACIL", "MEDIO"]:
                             nova_dif = "MEDIO" if env.dificuldade == "FACIL" else "DIFICIL"
@@ -428,7 +427,8 @@ def main():
                                     ag_instancia.modo_selecionado = modo_atual
 
                     elif evento.key == pygame.K_t and agente_selecionado == "Algoritmo Genético":
-                        caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_treino_ag.log")
+                        nome_log = f"debug_treino_ag_{env.dificuldade}.log"
+                        caminho_log = os.path.join(os.path.dirname(os.path.abspath(__file__)), nome_log)
                         if os.path.exists(caminho_log): os.remove(caminho_log)
 
                         ag_instancia = AlgoritmoGenetico(env)
