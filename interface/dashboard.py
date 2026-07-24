@@ -140,7 +140,7 @@ class Dashboard:
         img_ia_titulo = self.fonte_texto.render("PARÂMETROS DE APRENDIZADO DA IA", True, self.AZUL_OBJETIVO)
         tela.blit(img_ia_titulo, (margem_x + 15, y_ia + 15))
 
-        if modo == "IA_QLEARNING" and ag_instancia is not None:
+        if modo in ["IA_QLEARNING", "IA_QLEARNING_ESCOLHA"] and ag_instancia is not None:
             textos_ia = [f"Episódios Treinados: {ag_instancia.episodio_atual} / {ag_instancia.episodios_totais}",
                          f"Taxa Epsilon (Exploração): {ag_instancia.epsilon:.4f}",
                          f"Estados na Tabela Q: {len(ag_instancia.q_tabela)}", f"Semente do Mapa: {env.seed_atual}"]
@@ -186,6 +186,8 @@ class Dashboard:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"
             else:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [ESC] Voltar"
+        elif modo == "IA_QLEARNING_ESCOLHA":
+            texto_rodape = "[T] Continuar Treinamento  |  [U] Usar Tabela Q Atual  |  [ESC] Voltar"
         elif modo == "IA_REPLAY":
             if env.dificuldade in ["FACIL", "MEDIO"]:
                 texto_rodape = "[A] Iniciar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"

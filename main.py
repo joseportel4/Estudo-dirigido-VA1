@@ -35,6 +35,7 @@ def main():
     rota_ia = []
     cerebro_carregado = None
     visitados_ag = set()  # Memória runtime do AG
+    qlearning_pronto = False
 
     # --- VARIÁVEIS DA ARENA DE COMPARAÇÃO ---
     lista_comparacao = []
@@ -173,7 +174,9 @@ def main():
                             estado_atual = "ESTADO_AGENTES"
                         elif agente_selecionado == "Q-Learning":
                             ag_instancia = AgenteQLearning(env)
-                            estado_atual = "ESTADO_TREINANDO_QL"
+                            qlearning_pronto = False
+                            acao_str = "[Q-Learning] Escolha uma ação..."
+                            estado_atual = "ESTADO_AGENTES"
                         else:
                             ag_instancia = AgenteAStar(env)
                             acao_str = f"[{agente_selecionado}] Prontidão"
@@ -293,6 +296,7 @@ def main():
                     acao_str = "[Q-Learning] Prontidão para Execução!"
                     ia_em_execucao = False
                     rota_ia = []
+                    qlearning_pronto = True
                     estado_atual = "ESTADO_AGENTES"
 
         elif estado_atual == "ESTADO_JOGAR":
@@ -395,10 +399,10 @@ def main():
                         ag_instancia = AgenteQLearning(env)
                         pontuacao = 0
                         status_jogo = "Correndo"
-                        acao_str = "[Q-Learning] Retreinando em Novo Mapa..."
+                        acao_str = "[Q-Learning] Novo mapa gerado! Escolha uma ação..."
                         ia_em_execucao = False
                         rota_ia = []
-                        estado_atual = "ESTADO_TREINANDO_QL"
+                        qlearning_pronto = False
 
                     # --- MERGE: Avanço Dinâmico de Nível (UX do Colega + Correção A*) ---
                     elif evento.key == pygame.K_n and agente_selecionado in ["Q-Learning", "A*", "Algoritmo Genético"]:
@@ -414,8 +418,8 @@ def main():
 
                             if agente_selecionado == "Q-Learning":
                                 ag_instancia = AgenteQLearning(env)
-                                acao_str = f"[Q-Learning] Retreinando no Nível {nova_dif}..."
-                                estado_atual = "ESTADO_TREINANDO_QL"
+                                acao_str = f"[Q-Learning] Nível {nova_dif} Gerado! Escolha uma ação..."
+                                qlearning_pronto = False
                             else:
                                 acao_str = f"Nível {nova_dif} Gerado! Pressione 'A' para testar."
                                 if agente_selecionado == "A*" and ag_instancia:
@@ -439,6 +443,13 @@ def main():
                             estado_atual = "ESTADO_TREINANDO_IA"
                         else:
                             acao_str = "Erro: Nenhum cérebro salvo para continuar!"
+
+                    elif evento.key == pygame.K_t and agente_selecionado == "Q-Learning" and not qlearning_pronto:
+                        estado_atual = "ESTADO_TREINANDO_QL"
+
+                    elif evento.key == pygame.K_u and agente_selecionado == "Q-Learning" and not qlearning_pronto:
+                        qlearning_pronto = True
+                        acao_str = "[Q-Learning] Prontidão para Execução!"
 
                     elif evento.key == pygame.K_c and agente_selecionado == "Algoritmo Genético":
                         ag_instancia = AlgoritmoGenetico(env)
@@ -471,14 +482,17 @@ def main():
                                 if rota_ia: ia_em_execucao = True; indice_rota = 0
 
                             elif agente_selecionado == "Q-Learning":
-                                acao_str = "Q-Learning Planejando..."
-                                dashboard.renderizar_frame(tela, env, pontuacao, acao_str, status_jogo,
-                                                           modo="IA_QLEARNING", ag_instancia=ag_instancia)
-                                pygame.display.flip()
-                                rota_ia = ag_instancia.planejar_rota()
-                                estado_ia = env.reset()
-                                if not rota_ia: acao_str = "Q-Learning: Rota não encontrada!"
-                                if rota_ia: ia_em_execucao = True; indice_rota = 0
+                                if qlearning_pronto:
+                                    acao_str = "Q-Learning Planejando..."
+                                    dashboard.renderizar_frame(tela, env, pontuacao, acao_str, status_jogo,
+                                                               modo="IA_QLEARNING", ag_instancia=ag_instancia)
+                                    pygame.display.flip()
+                                    rota_ia = ag_instancia.planejar_rota()
+                                    estado_ia = env.reset()
+                                    if not rota_ia: acao_str = "Q-Learning: Rota não encontrada!"
+                                    if rota_ia: ia_em_execucao = True; indice_rota = 0
+                                else:
+                                    acao_str = "Escolha Treinar [T] ou Usar Tabela [U] primeiro!"
 
                             elif agente_selecionado == "Algoritmo Genético":
                                 if cerebro_carregado:
@@ -523,7 +537,10 @@ def main():
             if agente_selecionado == "A*":
                 modo_painel = "IA_ASTAR"
             elif agente_selecionado == "Q-Learning":
-                modo_painel = "IA_QLEARNING"
+                if qlearning_pronto:
+                    modo_painel = "IA_QLEARNING"
+                else:
+                    modo_painel = "IA_QLEARNING_ESCOLHA"
             elif agente_selecionado == "Algoritmo Genético":
                 if cerebro_carregado and (ia_em_execucao or status_jogo != "Correndo"):
                     modo_painel = "IA_REPLAY"
