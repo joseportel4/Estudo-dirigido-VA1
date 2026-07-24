@@ -139,7 +139,6 @@ class Dashboard:
 
         if modo == "IA_QLEARNING" and ag_instancia is not None:
             textos_ia = [
-                f"Episódios Treinados: {ag_instancia.episodio_atual} / {ag_instancia.episodios_totais}",
                 f"Taxa Epsilon (Exploração): {ag_instancia.epsilon:.4f}",
                 f"Estados na Tabela Q: {len(ag_instancia.q_tabela)}",
                 f"Semente do Mapa: {env.seed_atual}"
