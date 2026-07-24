@@ -122,11 +122,6 @@ class Dashboard:
 
         self._desenhar_card(tela, margem_x, 210, largura_metade, 90, "AVANÇO (EIXO Y)", f"{env.posicao_y} / {env.comprimento - 1}",
                             self.BRANCO)
-        dist_tiros = env.posicao_y - env.linha_tiros_y
-        cor_dist = self.VERMELHO_MINA if dist_tiros < 4 else self.BRANCO
-        self._desenhar_card(tela, margem_x + largura_metade + 20, 210, largura_metade, 90, "DIST. AMEAÇA",
-                            f"{dist_tiros} blocos", cor_dist)
-
         self._desenhar_card(tela, margem_x, 320, largura_metade, 90, "FITNESS (PONTOS)", f"{pontuacao}",
                             self.OURO_CHOCOLATE)
         self._desenhar_card(tela, margem_x + largura_metade + 20, 320, largura_metade, 90, "ÚLTIMA AÇÃO", acao_str,
@@ -142,7 +137,6 @@ class Dashboard:
         # Condicionais de texto adaptadas para exibir Genético ou Q-Learning
         if modo == "IA_QLEARNING" and ag_instancia is not None:
             textos_ia = [
-                f"Episódios Treinados: {ag_instancia.episodio_atual} / {ag_instancia.episodios_totais}",
                 f"Taxa Epsilon (Exploração): {ag_instancia.epsilon:.4f}",
                 f"Estados na Tabela Q: {len(ag_instancia.q_tabela)}",
                 f"Semente do Mapa: {env.seed_atual}"

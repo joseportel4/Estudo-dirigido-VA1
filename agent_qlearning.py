@@ -30,7 +30,7 @@ class AgenteQLearning:
         config_defaults = {
             "FACIL":   {"alpha": 0.30, "gamma": 0.95, "decay": 0.994,  "episodios": 800,  "troca_mapa": 5},
             "MEDIO":   {"alpha": 0.20, "gamma": 0.97, "decay": 0.997,  "episodios": 2000, "troca_mapa": 5},
-            "DIFICIL": {"alpha": 0.15, "gamma": 0.99, "decay": 0.9985, "episodios": 4000, "troca_mapa": 8},
+            "DIFICIL": {"alpha": 0.15, "gamma": 0.99, "decay": 0.9985, "episodios": 4000, "troca_mapa": 3},
         }
 
         dificuldade = getattr(self.env, "dificuldade", "MEDIO").upper()
@@ -66,7 +66,7 @@ class AgenteQLearning:
             try:
                 with open(CAMINHO_QTABLE, 'r') as f:
                     dados = json.load(f)
-                # Chaves JSON são strings → converte de volta para tuplas com ast.literal_eval
+                #converte de volta para tuplas com ast.literal_eval
                 self.q_tabela = {ast.literal_eval(k): v for k, v in dados.items()}
                 print(f"[Q-Learning] Tabela Q carregada: {len(self.q_tabela)} estados conhecidos.")
             except Exception as e:
@@ -76,7 +76,7 @@ class AgenteQLearning:
     def _salvar_qtable(self):
         """Persiste a Tabela Q Universal no arquivo JSON."""
         try:
-            # Converte chaves tupla para string (JSON não aceita tuplas como chave)
+            # Converte chaves tupla para string 
             dados = {str(k): v for k, v in self.q_tabela.items()}
             with open(CAMINHO_QTABLE, 'w') as f:
                 json.dump(dados, f, indent=2)
@@ -90,15 +90,7 @@ class AgenteQLearning:
 
     def get_estado(self, visao_local, env=None, ultima_acao=-1):
         """
-        Layout visao_local[linha][coluna] — agente no centro [2][2]:
-          linha 0 → dy = -2  (2 passos sentido RECUAR)
-          linha 1 → dy = -1  (1 passo  sentido RECUAR — imediato)
-          linha 2 → dy =  0  (linha do agente)
-          linha 3 → dy = +1  (1 passo  sentido AVANÇAR — imediato)
-          linha 4 → dy = +2  (2 passos sentido AVANÇAR)
-          col 0=dx-2  col 1=dx-1  col 2=dx 0  col 3=dx+1  col 4=dx+2
-
-        Composição do estado (14 features):
+        Composição do estado:
           (av, rec, esq, dir)              — raio 1: terreno nos 4 destinos imediatos (5 categorias)
           (av2, esq2, dir2)                — raio 2: perigo a 2 passos nas 3 direções úteis (binário)
           (choco_av, choco_esq, choco_dir) — raio 2: migalhas de chocolate nas 3 direções (binário)
@@ -345,7 +337,7 @@ class AgenteQLearning:
 
     def planejar_rota(self):
         """
-        Modo Inferência (Replay): executa a política greedy sobre a Tabela Q aprendida.
+        executa a política greedy sobre a Tabela Q aprendida.
 
         Dois mecanismos de segurança:
           - Máscara de Sobrevivência Raio 1: bloqueia (-99999) ações que levariam o agente
@@ -359,7 +351,7 @@ class AgenteQLearning:
         passos    = 0
         ultima_acao = -1
 
-        contagem_pos = {}  # (x, y) → nº de vezes que a posição foi visitada
+        contagem_pos = {} 
 
         while not done and passos < self.env.limite_passos:
             passos += 1
