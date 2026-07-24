@@ -1,4 +1,6 @@
 import pygame
+import json
+import os
 
 
 class Dashboard:
@@ -145,6 +147,26 @@ class Dashboard:
         elif modo == "IA_ASTAR" and ag_instancia is not None:
             textos_ia = [f"Algoritmo: Heurístico (A-Estrela)", f"Personalidade Ativa:",
                          f"-> {ag_instancia.modo_selecionado}", f"Semente do Mapa: {env.seed_atual}"]
+        elif modo in ["IA_GENETICO", "IA_REPLAY"]:
+            gen_txt = "---"
+            fit_txt = "---"
+            dif_txt = "---"
+            try:
+                caminho_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cerebro_campeao.json")
+                if os.path.exists(caminho_json):
+                    with open(caminho_json, "r", encoding="utf-8") as f:
+                        dados_cb = json.load(f)
+                    gen_txt = str(dados_cb.get("geracao_vencedora", "---"))
+                    fit_txt = f"{dados_cb.get('fitness_medio', 0):.1f}"
+                    dif_txt = str(dados_cb.get("dificuldade", "---"))
+            except Exception:
+                pass
+            textos_ia = [
+                f"Geração Vencedora: {gen_txt}",
+                f"Fitness Campeão: {fit_txt}",
+                f"Dificuldade Alvo: {dif_txt}",
+                f"Semente do Mapa: {env.seed_atual}"
+            ]
         else:
             textos_ia = ["Geração Atual: ---", "Melhor Fitness Global: ---", "Taxa de Exploração (Epsilon): ---",
                          "Penalidades Sofridas: ---"]
@@ -153,13 +175,12 @@ class Dashboard:
             img_texto = self.fonte_texto.render(texto, True, self.CINZA_TEXTO)
             tela.blit(img_texto, (margem_x + 15, y_ia + 55 + (i * 28)))
 
-        # --- MERGE: Atualização dos textos de rodapé (UX) ---
         if modo == "MANUAL":
             texto_rodape = "[Setas] Mover  |  [R] Reiniciar  |  [N] Avançar Nível  |  [ESC] Voltar"
         elif modo == "IA_ASTAR":
             texto_rodape = "[A] Iniciar | [1] Focado | [2] Equilibrado | [3] Guloso | [M] Novo Mapa | [ESC] Voltar"
         elif modo == "IA_GENETICO":
-            texto_rodape = "[L] Continuar Treino |  [C] Injetar Cérebro Atual |  [ESC] Voltar"
+            texto_rodape = "[L] Continuar Treino |  [C] Injetar Cérebro Atual | [M] Novo Mapa | [ESC] Voltar"
         elif modo == "IA_QLEARNING":
             if env.dificuldade in ["FACIL", "MEDIO"]:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"
@@ -167,9 +188,9 @@ class Dashboard:
                 texto_rodape = "[A] Executar  |  [R] Repetir  |  [M] Novo Mapa  |  [ESC] Voltar"
         elif modo == "IA_REPLAY":
             if env.dificuldade in ["FACIL", "MEDIO"]:
-                texto_rodape = "[A] Iniciar Replay  |  [R] Repetir Replay  |  [N] Subir Nível  |  [ESC] Voltar"
+                texto_rodape = "[A] Iniciar  |  [R] Repetir  |  [M] Novo Mapa  |  [N] Subir Nível  |  [ESC] Voltar"
             else:
-                texto_rodape = "[A] Iniciar Replay  |  [R] Repetir Replay  |  [ESC] Voltar"
+                texto_rodape = "[A] Iniciar  |  [R] Repetir  |  [M] Novo Mapa  |  [ESC] Voltar"
         else:
             texto_rodape = "[ESC] Voltar"
 
