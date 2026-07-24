@@ -1,5 +1,6 @@
 import pygame
 
+
 class Dashboard:
     def __init__(self):
         # ---- CONFIGURAÇÕES VISUAIS ----
@@ -19,7 +20,6 @@ class Dashboard:
         self.OURO_CHOCOLATE = (255, 190, 50)
         self.VERMELHO_MINA = (220, 50, 60)
         self.AZUL_OBJETIVO = (0, 180, 255)
-        self.VERMELHO_FOGO = (255, 60, 0, 120)
 
         # Inicialização das Fontes
         pygame.font.init()
@@ -76,11 +76,6 @@ class Dashboard:
                     pygame.draw.circle(tela, self.AZUL_OBJETIVO, centro, int(self.LARGURA_CELULA // 2.5))
                     pygame.draw.circle(tela, self.AZUL_OBJETIVO, centro, int(self.LARGURA_CELULA // 2 * pulso), 2)
 
-                if y <= env.linha_tiros_y:
-                    s_fogo = pygame.Surface((self.LARGURA_CELULA, self.LARGURA_CELULA), pygame.SRCALPHA)
-                    s_fogo.fill(self.VERMELHO_FOGO)
-                    tela.blit(s_fogo, (px, py))
-
                 if abs(x - env.posicao_x) > 2 or abs(y - env.posicao_y) > 2:
                     s_fog = pygame.Surface((self.LARGURA_CELULA, self.LARGURA_CELULA), pygame.SRCALPHA)
                     s_fog.fill((10, 12, 15, 200))
@@ -120,8 +115,16 @@ class Dashboard:
             self.AZUL_OBJETIVO if "VITÓRIA" in status else self.VERMELHO_MINA)
         self._desenhar_card(tela, margem_x, 100, largura_total, 90, "STATUS DO AGENTE", status, cor_status)
 
-        self._desenhar_card(tela, margem_x, 210, largura_metade, 90, "AVANÇO (EIXO Y)", f"{env.posicao_y} / {env.comprimento - 1}",
+        self._desenhar_card(tela, margem_x, 210, largura_metade, 90, "AVANÇO (EIXO Y)",
+                            f"{env.posicao_y} / {env.comprimento - 1}",
                             self.BRANCO)
+
+        # --- NOVA LÓGICA: Energia e Passos Restantes ---
+        passos_restantes = env.limite_passos - env.passos_dados
+        cor_bateria = self.VERMELHO_MINA if passos_restantes < (env.limite_passos * 0.2) else self.BRANCO
+        self._desenhar_card(tela, margem_x + largura_metade + 20, 210, largura_metade, 90, "ENERGIA / PASSOS",
+                            f"{passos_restantes}", cor_bateria)
+
         self._desenhar_card(tela, margem_x, 320, largura_metade, 90, "FITNESS (PONTOS)", f"{pontuacao}",
                             self.OURO_CHOCOLATE)
         self._desenhar_card(tela, margem_x + largura_metade + 20, 320, largura_metade, 90, "ÚLTIMA AÇÃO", acao_str,
@@ -134,11 +137,17 @@ class Dashboard:
         img_ia_titulo = self.fonte_texto.render("PARÂMETROS DE APRENDIZADO DA IA", True, self.AZUL_OBJETIVO)
         tela.blit(img_ia_titulo, (margem_x + 15, y_ia + 15))
 
-        # Condicionais de texto adaptadas para exibir Genético ou Q-Learning
         if modo == "IA_QLEARNING" and ag_instancia is not None:
             textos_ia = [
                 f"Taxa Epsilon (Exploração): {ag_instancia.epsilon:.4f}",
                 f"Estados na Tabela Q: {len(ag_instancia.q_tabela)}",
+                f"Semente do Mapa: {env.seed_atual}"
+            ]
+        elif modo == "IA_ASTAR" and ag_instancia is not None:
+            textos_ia = [
+                f"Algoritmo: Heurístico (A-Estrela)",
+                f"Personalidade Ativa:",
+                f"-> {ag_instancia.modo_selecionado}",
                 f"Semente do Mapa: {env.seed_atual}"
             ]
         else:
@@ -149,11 +158,10 @@ class Dashboard:
             img_texto = self.fonte_texto.render(texto, True, self.CINZA_TEXTO)
             tela.blit(img_texto, (margem_x + 15, y_ia + 55 + (i * 28)))
 
-        # Combinação de todos os atalhos de rodapé
         if modo == "MANUAL":
             texto_rodape = "[Setas] Mover  |  [R] Reiniciar  |  [N] Avançar Nível  |  [ESC] Voltar"
         elif modo == "IA_ASTAR":
-            texto_rodape = "[A] Iniciar A* |  [R] Repetir Mapa |  [N] Subir Nível  |  [M] Novo Mapa  |  [ESC] Voltar"
+            texto_rodape = "[A] Iniciar | [1] Focado | [2] Equilibrado | [3] Guloso | [M] Novo Mapa | [ESC] Voltar"
         elif modo == "IA_GENETICO":
             texto_rodape = "[L] Continuar Treino |  [C] Injetar Cérebro Atual |  [ESC] Voltar"
         elif modo == "IA_QLEARNING":
@@ -187,15 +195,16 @@ class Dashboard:
         pygame.draw.rect(tela, cor, rect.inflate(40, 40), 2, border_radius=10)
         tela.blit(img, rect)
 
-        # Regras de visuais sobrepostas mantidas para o Q-Learning
         if modo == "IA_QLEARNING":
-            img_dica1 = self.fonte_texto.render("[ R / A ] Executar Novamente   |   [ M ] Mudar Mapa", True, self.BRANCO)
+            img_dica1 = self.fonte_texto.render("[ R / A ] Executar Novamente   |   [ M ] Mudar Mapa", True,
+                                                self.BRANCO)
             rect_dica1 = img_dica1.get_rect(center=(self.LARGURA_JOGO // 2, (self.ALTURA_TELA // 2) + 55))
             tela.blit(img_dica1, rect_dica1)
 
             if env.dificuldade in ["FACIL", "MEDIO"]:
                 prox_nivel = "MÉDIO" if env.dificuldade == "FACIL" else "DIFÍCIL"
-                img_dica2 = self.fonte_texto.render(f"[ N ] Subir para Nível {prox_nivel}   |   [ ESC ] Sair", True, self.OURO_CHOCOLATE)
+                img_dica2 = self.fonte_texto.render(f"[ N ] Subir para Nível {prox_nivel}   |   [ ESC ] Sair", True,
+                                                    self.OURO_CHOCOLATE)
             else:
                 img_dica2 = self.fonte_texto.render("[ ESC ] Sair para Menu de Dificuldade", True, self.OURO_CHOCOLATE)
 
