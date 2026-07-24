@@ -34,7 +34,7 @@ def main():
     ia_em_execucao = False
     rota_ia = []
     cerebro_carregado = None
-    visitados_ag = set() # Memória runtime do AG
+    visitados_ag = set()  # Memória runtime do AG
 
     estado_ia = None
     indice_rota = 0
@@ -105,6 +105,7 @@ def main():
                         ag_instancia = AgenteQLearning(env)
                         estado_atual = "ESTADO_TREINANDO_QL"
                     else:
+                        ag_instancia = AgenteAStar(env)
                         acao_str = f"[{agente_selecionado}] Prontidão"
                         estado_atual = "ESTADO_AGENTES"
 
@@ -176,13 +177,21 @@ def main():
                         acao_str = "Avançou de Nível"
                     elif status_jogo == "Correndo":
                         if evento.key == pygame.K_UP:
-                            acao = 0; acao_str = "Avançar"; tomou_acao = True
+                            acao = 0;
+                            acao_str = "Avançar";
+                            tomou_acao = True
                         elif evento.key == pygame.K_LEFT:
-                            acao = 1; acao_str = "Esquerda"; tomou_acao = True
+                            acao = 1;
+                            acao_str = "Esquerda";
+                            tomou_acao = True
                         elif evento.key == pygame.K_RIGHT:
-                            acao = 2; acao_str = "Direita"; tomou_acao = True
+                            acao = 2;
+                            acao_str = "Direita";
+                            tomou_acao = True
                         elif evento.key == pygame.K_DOWN:
-                            acao = 3; acao_str = "Recuar"; tomou_acao = True
+                            acao = 3;
+                            acao_str = "Recuar";
+                            tomou_acao = True
 
             if tomou_acao and status_jogo == "Correndo":
                 estado_ia, recompensa, done, _ = env.step(acao)
@@ -221,6 +230,23 @@ def main():
                         ia_em_execucao = False
                         rota_ia = []
                         visitados_ag = set()
+
+                        if agente_selecionado == "A*" and ag_instancia:
+                            modo_atual = ag_instancia.modo_selecionado
+                            ag_instancia = AgenteAStar(env)
+                            ag_instancia.modo_selecionado = modo_atual
+
+                    elif evento.key == pygame.K_1 and agente_selecionado == "A*":
+                        if ag_instancia: ag_instancia.modo_selecionado = "FOCADO"
+                        acao_str = "A* preparado como FOCADO"
+
+                    elif evento.key == pygame.K_2 and agente_selecionado == "A*":
+                        if ag_instancia: ag_instancia.modo_selecionado = "EQUILIBRADO"
+                        acao_str = "A* preparado como EQUILIBRADO"
+
+                    elif evento.key == pygame.K_3 and agente_selecionado == "A*":
+                        if ag_instancia: ag_instancia.modo_selecionado = "GULOSO"
+                        acao_str = "A* preparado como GULOSO"
 
                     elif evento.key == pygame.K_m and agente_selecionado == "Q-Learning":
                         env = CampoBatalhaEnv(dificuldade=env.dificuldade)
@@ -284,11 +310,12 @@ def main():
 
                         if status_jogo == "Correndo":
                             if agente_selecionado == "A*":
-                                agente = AgenteAStar(env)
-                                acao_str = "A* Calculando Rota..."
-                                dashboard.renderizar_frame(tela, env, pontuacao, acao_str, status_jogo, modo="IA_ASTAR")
+                                acao_str = f"A* ({ag_instancia.modo_selecionado}) Calculando Rota..."
+                                dashboard.renderizar_frame(tela, env, pontuacao, acao_str, status_jogo, modo="IA_ASTAR",
+                                                           ag_instancia=ag_instancia)
                                 pygame.display.flip()
-                                rota_ia = agente.planejar_rota()
+
+                                rota_ia = ag_instancia.planejar_rota(modo=ag_instancia.modo_selecionado)
                                 if not rota_ia: acao_str = "A* Erro: Sem Saída!"
                                 if rota_ia: ia_em_execucao = True; indice_rota = 0
 
@@ -317,8 +344,8 @@ def main():
                     if agente_selecionado == "Algoritmo Genético":
                         ag_dummy = AlgoritmoGenetico(env)
                         visao_local = estado_ia
-                        # A Máscara de Memória age perfeitamente aqui!
-                        acao = ag_dummy._decidir_acao(cerebro_carregado, visao_local, env, modo_treino=False, visitados=visitados_ag)
+                        acao = ag_dummy._decidir_acao(cerebro_carregado, visao_local, env, modo_treino=False,
+                                                      visitados=visitados_ag)
                         visitados_ag.add((env.posicao_x, env.posicao_y, acao))
                     else:
                         if indice_rota < len(rota_ia):
